@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 )
 
 var baseURL = "https://www.wantedly.com/projects?type=mixed&occupation_types%5B%5D=jp__engineering&keywords%5B%5D=golang&page=1"
@@ -32,8 +33,8 @@ func getPage(page int) {
 
 	doc.Find(".projects-index-single").Each(func(i int, s *goquery.Selection) {
 		id, _ := s.Attr("data-project-id")
-		title := s.Find(".project-title").Text()
-		excerpt := s.Find(".project-excerpt").Text()
+		title := cleanString(s.Find(".project-title").Text())
+		excerpt := cleanString(s.Find(".project-excerpt").Text())
 		fmt.Println(id, title, excerpt)
 	})
 }
@@ -54,6 +55,10 @@ func getPages() int {
 		pages = s.Find("a").Length()
 	})
 	return pages
+}
+
+func cleanString(str string) string {
+	return strings.Join(strings.Fields(strings.TrimSpace(str)), " ")
 }
 
 func hasErrCodes(resp *http.Response) {
