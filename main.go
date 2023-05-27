@@ -11,14 +11,24 @@ import (
 
 var baseURL = "https://www.wantedly.com/projects?type=mixed&occupation_types%5B%5D=jp__engineering&keywords%5B%5D=golang&page=1"
 
-func main() {
-	pages := getPages()
-	for i := 1; i <= pages; i++ {
-		getPage(i)
-	}
+type Job struct {
+	id      string
+	title   string
+	summary string
 }
 
-func getPage(page int) {
+func main() {
+	var jobs []Job
+	pages := getPages()
+	for i := 1; i <= pages; i++ {
+		extractJobs := getPage(i)
+		jobs = append(jobs, extractJobs...)
+	}
+	fmt.Println(jobs)
+}
+
+func getPage(page int) []Job {
+	var jobs []Job
 	pageURL := baseURL + "&page=" + strconv.Itoa(page)
 	fmt.Println("リクエストURL：", pageURL)
 
@@ -32,11 +42,21 @@ func getPage(page int) {
 	hasErr(err)
 
 	doc.Find(".projects-index-single").Each(func(i int, s *goquery.Selection) {
-		id, _ := s.Attr("data-project-id")
-		title := cleanString(s.Find(".project-title").Text())
-		excerpt := cleanString(s.Find(".project-excerpt").Text())
-		fmt.Println(id, title, excerpt)
+		jobs = append(jobs, extractJob(s))
 	})
+	return jobs
+}
+
+func extractJob(s *goquery.Selection) Job {
+	id, _ := s.Attr("data-project-id")
+	title := cleanString(s.Find(".project-title").Text())
+	summary := cleanString(s.Find(".project-excerpt").Text())
+	
+	return Job{
+		id:      id,
+		title:   title,
+		summary: summary,
+	}
 }
 
 func getPages() int {
