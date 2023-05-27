@@ -1,10 +1,12 @@
 package main
 
 import (
+	"encoding/csv"
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 )
@@ -24,7 +26,28 @@ func main() {
 		extractJobs := getPage(i)
 		jobs = append(jobs, extractJobs...)
 	}
-	fmt.Println(jobs)
+	writeJobs(jobs)
+}
+
+func writeJobs(jobs []Job) {
+	file, err := os.Create("jobs.csv")
+	hasErr(err)
+
+	w := csv.NewWriter(file)
+	defer w.Flush()
+
+	headers := []string{"Id", "Title", "Summary"}
+	err = w.Write(headers)
+	hasErr(err)
+
+	for _, job := range jobs {
+		err := w.Write([]string{
+			"https://www.wantedly.com/projects/" + job.id,
+			job.title,
+			job.summary,
+		})
+		hasErr(err)
+	}
 }
 
 func getPage(page int) []Job {
@@ -51,7 +74,7 @@ func extractJob(s *goquery.Selection) Job {
 	id, _ := s.Attr("data-project-id")
 	title := cleanString(s.Find(".project-title").Text())
 	summary := cleanString(s.Find(".project-excerpt").Text())
-	
+
 	return Job{
 		id:      id,
 		title:   title,
