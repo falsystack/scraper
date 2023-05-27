@@ -52,6 +52,7 @@ func writeJobs(jobs []Job) {
 
 func getPage(page int) []Job {
 	var jobs []Job
+	c := make(chan Job)
 	pageURL := baseURL + "&page=" + strconv.Itoa(page)
 	fmt.Println("リクエストURL：", pageURL)
 
@@ -64,18 +65,24 @@ func getPage(page int) []Job {
 	doc, err := goquery.NewDocumentFromReader(resp.Body)
 	hasErr(err)
 
-	doc.Find(".projects-index-single").Each(func(i int, s *goquery.Selection) {
-		jobs = append(jobs, extractJob(s))
+	jobSection := doc.Find(".projects-index-single")
+	jobSection.Each(func(i int, s *goquery.Selection) {
+		go extractJob(s, c)
 	})
+
+	for i := 0; i < jobSection.Length(); i++ {
+		job := <-c
+		jobs = append(jobs, job)
+	}
 	return jobs
 }
 
-func extractJob(s *goquery.Selection) Job {
+func extractJob(s *goquery.Selection, c chan<- Job) {
 	id, _ := s.Attr("data-project-id")
 	title := cleanString(s.Find(".project-title").Text())
 	summary := cleanString(s.Find(".project-excerpt").Text())
 
-	return Job{
+	c <- Job{
 		id:      id,
 		title:   title,
 		summary: summary,
