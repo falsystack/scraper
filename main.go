@@ -20,6 +20,22 @@ func main() {
 func getPage(page int) {
 	pageURL := baseURL + "&page=" + strconv.Itoa(page)
 	fmt.Println("リクエストURL：", pageURL)
+
+	resp, err := http.Get(pageURL)
+	hasErr(err)
+	hasErrCodes(resp)
+
+	defer resp.Body.Close()
+
+	doc, err := goquery.NewDocumentFromReader(resp.Body)
+	hasErr(err)
+
+	doc.Find(".projects-index-single").Each(func(i int, s *goquery.Selection) {
+		id, _ := s.Attr("data-project-id")
+		title := s.Find(".project-title").Text()
+		excerpt := s.Find(".project-excerpt").Text()
+		fmt.Println(id, title, excerpt)
+	})
 }
 
 func getPages() int {
