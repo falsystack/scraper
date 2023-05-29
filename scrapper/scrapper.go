@@ -7,8 +7,8 @@ import (
 	"log"
 	"net/http"
 	"os"
+	. "scraper/utils"
 	"strconv"
-	"strings"
 )
 
 type job struct {
@@ -34,14 +34,14 @@ func Scrape(term string) {
 
 func writeJobs(jobs []job) {
 	file, err := os.Create("jobs.csv")
-	hasErr(err)
+	HasErr(err)
 
 	w := csv.NewWriter(file)
 	defer w.Flush()
 
 	headers := []string{"Id", "Title", "Summary"}
 	err = w.Write(headers)
-	hasErr(err)
+	HasErr(err)
 
 	for _, job := range jobs {
 		err := w.Write([]string{
@@ -49,7 +49,7 @@ func writeJobs(jobs []job) {
 			job.title,
 			job.summary,
 		})
-		hasErr(err)
+		HasErr(err)
 	}
 }
 
@@ -60,13 +60,13 @@ func getPage(page int, mChan chan<- []job, url string) {
 	fmt.Println("リクエストURL：", pageURL)
 
 	resp, err := http.Get(pageURL)
-	hasErr(err)
+	HasErr(err)
 	hasErrCodes(resp)
 
 	defer resp.Body.Close()
 
 	doc, err := goquery.NewDocumentFromReader(resp.Body)
-	hasErr(err)
+	HasErr(err)
 
 	jobSection := doc.Find(".projects-index-single")
 	jobSection.Each(func(i int, s *goquery.Selection) {
@@ -82,8 +82,8 @@ func getPage(page int, mChan chan<- []job, url string) {
 
 func extractJob(s *goquery.Selection, c chan<- job) {
 	id, _ := s.Attr("data-project-id")
-	title := cleanString(s.Find(".project-title").Text())
-	summary := cleanString(s.Find(".project-excerpt").Text())
+	title := CleanString(s.Find(".project-title").Text())
+	summary := CleanString(s.Find(".project-excerpt").Text())
 
 	c <- job{
 		id:      id,
@@ -95,13 +95,13 @@ func extractJob(s *goquery.Selection, c chan<- job) {
 func getPages(url string) int {
 	pages := 0
 	resp, err := http.Get(url)
-	hasErr(err)
+	HasErr(err)
 	hasErrCodes(resp)
 
 	defer resp.Body.Close()
 
 	doc, err := goquery.NewDocumentFromReader(resp.Body)
-	hasErr(err)
+	HasErr(err)
 
 	doc.Find(".pagination").Each(func(i int, s *goquery.Selection) {
 		// paginationクラス中の全てのaタグを探し出す。
@@ -110,18 +110,8 @@ func getPages(url string) int {
 	return pages
 }
 
-func cleanString(str string) string {
-	return strings.Join(strings.Fields(strings.TrimSpace(str)), " ")
-}
-
 func hasErrCodes(resp *http.Response) {
 	if resp.StatusCode != 200 {
 		log.Fatalln("request failed with status : ", resp.StatusCode)
-	}
-}
-
-func hasErr(err error) {
-	if err != nil {
-		log.Fatalln(err)
 	}
 }
