@@ -21,10 +21,14 @@ type Job struct {
 
 func main() {
 	var jobs []Job
+	c := make(chan []Job)
 	pages := getPages()
 	for i := 1; i <= pages; i++ {
-		extractJobs := getPage(i)
-		jobs = append(jobs, extractJobs...)
+		go getPage(i, c)
+	}
+
+	for i := 0; i < pages; i++ {
+		jobs = append(jobs, <-c...)
 	}
 	writeJobs(jobs)
 }
@@ -50,7 +54,7 @@ func writeJobs(jobs []Job) {
 	}
 }
 
-func getPage(page int) []Job {
+func getPage(page int, mChan chan<- []Job) {
 	var jobs []Job
 	c := make(chan Job)
 	pageURL := baseURL + "&page=" + strconv.Itoa(page)
@@ -74,7 +78,7 @@ func getPage(page int) []Job {
 		job := <-c
 		jobs = append(jobs, job)
 	}
-	return jobs
+	mChan <- jobs
 }
 
 func extractJob(s *goquery.Selection, c chan<- Job) {
